@@ -1,0 +1,36 @@
+# https://taskfile.dev
+
+version: '3'
+
+method: none
+
+tasks:
+  default:
+    cmds:
+      - task: download
+      - task: transform
+
+  download:
+    desc: Abruf der DBIS-Daten
+    cmds:
+      - python3 download.py
+    sources:
+      - download.py
+      - Taskfile.yml
+    generates:
+      - input/dbis-dla.jsonl
+    preconditions:
+      - command -v python3
+
+  download:
+    desc: Abruf der DBIS-Daten
+    cmds:
+      - python3 download.py
+    sources:
+      - input/dbis-dla.jsonl
+      - transform.py
+      - Taskfile.yml
+    generates:
+      - output/dbis-dla.tsv
+    preconditions:
+      - command -v python3
