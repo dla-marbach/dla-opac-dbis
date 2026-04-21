@@ -14,10 +14,27 @@ args = parser.parse_args()
 
 df_input = pd.read_json(args.input, lines=True)
 
+# Hilfsfunktionen für Datumsformatierung
+
+def to_year_string(value):
+	if pd.isna(value):
+		return ''
+	year = pd.to_datetime(value, errors='coerce').year
+	if pd.isna(year):
+		return ''
+	return str(int(year))
+
+def format_year_range(start_value, end_value):
+	start_year = to_year_string(start_value)
+	end_year = to_year_string(end_value)
+	if start_year or end_year:
+		return f"{start_year}-{end_year}"
+	return ''
+
+# Transformation
+
 df = pd.DataFrame(index=df_input.index)
-
 df['id'] = 'DBIS' + df_input['id'].astype('string')
-
 df['category'] = 'Digitale Nachschlagewerke'
 df['categoryMedium_mv'] = 'Online-Ressource'
 df['categoryPublication_mv'] = df_input['types'].apply(
@@ -36,22 +53,7 @@ df['dateCataloged'] = pd.to_datetime(df_input['created_at'], errors='coerce').dt
 df['dateModified'] = pd.to_datetime(df_input['modified_at'], errors='coerce').dt.date.astype('string')
 df['dateOrigin'] = pd.to_datetime(df_input['publication_time_start'], errors='coerce').dt.year.astype('Int64').astype('string').fillna('')
 df['dateOriginComment_mv'] = df_input.apply(
-	lambda row: (
-		f"{str(row.get('publication_time_start')).strip()} - {str(row.get('publication_time_end')).strip()}"
-		if pd.notna(row.get('publication_time_start'))
-		and str(row.get('publication_time_start')).strip()
-		and pd.notna(row.get('publication_time_end'))
-		and str(row.get('publication_time_end')).strip()
-		else (
-			str(row.get('publication_time_start')).strip()
-			if pd.notna(row.get('publication_time_start')) and str(row.get('publication_time_start')).strip()
-			else (
-				str(row.get('publication_time_end')).strip()
-				if pd.notna(row.get('publication_time_end')) and str(row.get('publication_time_end')).strip()
-				else ''
-			)
-		)
-	),
+	lambda row: format_year_range(row.get('publication_time_start'), row.get('publication_time_end')),
 	axis=1,
 )
 df['display'] = df_input['title'].fillna('ohne Titel')
@@ -59,22 +61,7 @@ df['displayAddition1'] = df_input['types'].apply(
 	lambda types: ', '.join([type_entry.get('title', '') for type_entry in types if type_entry.get('title')]) or 'Datenbank'
 )
 df['displayAddition2'] = df_input.apply(
-	lambda row: (
-		f"{str(row.get('report_time_start')).strip()} - {str(row.get('report_time_end')).strip()}"
-		if pd.notna(row.get('report_time_start'))
-		and str(row.get('report_time_start')).strip()
-		and pd.notna(row.get('report_time_end'))
-		and str(row.get('report_time_end')).strip()
-		else (
-			str(row.get('report_time_start')).strip()
-			if pd.notna(row.get('report_time_start')) and str(row.get('report_time_start')).strip()
-			else (
-				str(row.get('report_time_end')).strip()
-				if pd.notna(row.get('report_time_end')) and str(row.get('report_time_end')).strip()
-				else ''
-			)
-		)
-	),
+	lambda row: format_year_range(row.get('report_time_start'), row.get('report_time_end')),
 	axis=1,
 )
 df['displayName'] = df_input.apply(
@@ -101,7 +88,7 @@ df['filterMedium_mv'] = 'Datenbank'
 df['filterSource'] = 'Digitale Nachschlagewerke'
 df['filterType_mv'] = 'Daten'
 df['note'] = df_input.apply(
-	lambda row: '. '.join(
+	lambda row: '␟'.join(
 		[
 			text
 			for text in [
@@ -144,22 +131,7 @@ df['subjectOther_mv'] = df_input['keywords'].apply(
 	)
 )
 df['textualHolding_mv'] = df_input.apply(
-	lambda row: (
-		f"{str(row.get('report_time_start')).strip()} - {str(row.get('report_time_end')).strip()}"
-		if pd.notna(row.get('report_time_start'))
-		and str(row.get('report_time_start')).strip()
-		and pd.notna(row.get('report_time_end'))
-		and str(row.get('report_time_end')).strip()
-		else (
-			str(row.get('report_time_start')).strip()
-			if pd.notna(row.get('report_time_start')) and str(row.get('report_time_start')).strip()
-			else (
-				str(row.get('report_time_end')).strip()
-				if pd.notna(row.get('report_time_end')) and str(row.get('report_time_end')).strip()
-				else ''
-			)
-		)
-	),
+	lambda row: format_year_range(row.get('report_time_start'), row.get('report_time_end')),
 	axis=1,
 )
 df['title'] = df_input['title'].fillna('ohne Titel')
@@ -217,4 +189,5 @@ df['website_description_mv'] = df_input['licenses'].apply(
 )
 
 # Export
+
 df.to_csv(args.output, sep='\t', index=False)
