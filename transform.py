@@ -10,65 +10,65 @@ __author__ = 'Felix Lohmeier'
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', '--input', help='Input file name', default='input/dbis-dla.jsonl')
-parser.add_argument('-o', '--output', help='Output file name', default='output/dbis-dla.tsv')
+parser.add_argument('-o', '--output', help='Output file name', default='output/dbis.tsv')
 args = parser.parse_args()
 
-df = pd.read_json(args.input, lines=True)
+df_input = pd.read_json(args.input, lines=True)
 
-df_out = pd.DataFrame(index=df.index)
+df = pd.DataFrame(index=df_input.index)
 
-df_out['source'] = 'DBIS'
-df_out['filterSource'] = 'Digitale Nachschlagewerke'
-df_out['category'] = 'Bibliotheksdokumente'
-df_out['categorySub'] = 'Datenbankressource'
-df_out['id'] = df['id'].astype('string')
-df_out['display'] = df['title'].fillna('')
-df_out['title'] = df['title'].fillna('')
-df_out['titleMain_text'] = df['title'].fillna('')
-df_out['displayAddition1'] = df['description_short'].fillna('')
-df_out['displayAddition2'] = df['types'].apply(
+df['source'] = 'AK'
+df['filterSource'] = 'Digitale Nachschlagewerke'
+df['category'] = 'Bibliotheksdokumente'
+df['categorySub'] = 'Datenbankressource'
+df['id'] = df_input['id'].astype('string')
+df['display'] = df_input['title'].fillna('')
+df['title'] = df_input['title'].fillna('')
+df['titleMain_text'] = df_input['title'].fillna('')
+df['displayAddition1'] = df_input['description_short'].fillna('')
+df['displayAddition2'] = df_input['types'].apply(
 	lambda types: ', '.join([type_entry.get('title', '') for type_entry in types if type_entry.get('title')])
 )
-df_out['description_text_mv'] = df['description'].fillna('')
-df_out['note'] = df['note'].fillna('')
-df_out['usageRestrictionNote'] = df['instructions'].fillna('')
-df_out['confidential'] = False
-df_out['filterDigital'] = df['licenses'].apply(
+df['description_text_mv'] = df_input['description'].fillna('')
+df['note'] = df_input['note'].fillna('')
+df['usageRestrictionNote'] = df_input['instructions'].fillna('')
+df['confidential'] = False
+df['filterDigital'] = df_input['licenses'].apply(
 	lambda licenses: bool(licenses) and any(
 		bool(access.get('accessUrl'))
 		for license_entry in licenses
 		for access in license_entry.get('accesses', [])
 	)
 )
-df_out['dateCataloged'] = pd.to_datetime(df['created_at'], errors='coerce').dt.date.astype('string')
-df_out['dateModified'] = pd.to_datetime(df['modified_at'], errors='coerce').dt.date.astype('string')
-df_out['dateOrigin'] = pd.to_datetime(df['publication_time_start'], errors='coerce').dt.year.astype('Int64').astype('string')
-df_out['isbn_mv'] = df['isbn_issn'].fillna('').astype('string').str.strip()
-df_out['creator_display_mv'] = df['authors'].apply(
+df['dateCataloged'] = pd.to_datetime(df_input['created_at'], errors='coerce').dt.date.astype('string')
+df['dateModified'] = pd.to_datetime(df_input['modified_at'], errors='coerce').dt.date.astype('string')
+df['dateOrigin'] = pd.to_datetime(df_input['publication_time_start'], errors='coerce').dt.year.astype('Int64').astype('string')
+df['isbn_mv'] = df_input['isbn_issn'].fillna('').astype('string').str.strip()
+df['creator_display_mv'] = df_input['authors'].apply(
 	lambda authors: json.dumps([author.get('title', '') for author in authors], ensure_ascii=False)
 )
-df_out['creator_id_mv'] = df['authors'].apply(
+df['creator_id_mv'] = df_input['authors'].apply(
 	lambda authors: json.dumps([str(author.get('id', '')) for author in authors], ensure_ascii=False)
 )
-df_out['subject_display_mv'] = df['subjects'].apply(
+df['subject_display_mv'] = df_input['subjects'].apply(
 	lambda subjects: json.dumps([subject.get('title', '') for subject in subjects], ensure_ascii=False)
 )
-df_out['subject_id_mv'] = df['subjects'].apply(
+df['subject_id_mv'] = df_input['subjects'].apply(
 	lambda subjects: json.dumps([str(subject.get('id', '')) for subject in subjects], ensure_ascii=False)
 )
-df_out['filterSubject_mv'] = df['subjects'].apply(
+df['filterSubject_mv'] = df_input['subjects'].apply(
 	lambda subjects: json.dumps([subject.get('title', '') for subject in subjects], ensure_ascii=False)
 )
-df_out['subjectOther_mv'] = df['keywords'].apply(
+df['subjectOther_mv'] = df_input['keywords'].apply(
 	lambda keywords: json.dumps([keyword.get('title', '') for keyword in keywords], ensure_ascii=False)
 )
-df_out['filterType_mv'] = df['types'].apply(
+df['filterType_mv'] = df_input['types'].apply(
 	lambda types: json.dumps([type_entry.get('title', '') for type_entry in types], ensure_ascii=False)
 )
-df_out['categoryContent_mv'] = df['types'].apply(
+df['categoryContent_mv'] = df_input['types'].apply(
 	lambda types: json.dumps([type_entry.get('title', '') for type_entry in types], ensure_ascii=False)
 )
-df_out['categoryMedia_mv'] = df['licenses'].apply(
+df['categoryMedia_mv'] = df_input['licenses'].apply(
 	lambda licenses: json.dumps(
 		[
 			license_entry.get('publicationForm', {}).get('title', '')
@@ -78,7 +78,7 @@ df_out['categoryMedia_mv'] = df['licenses'].apply(
 		ensure_ascii=False,
 	)
 )
-df_out['categoryMedium_mv'] = df['licenses'].apply(
+df['categoryMedium_mv'] = df_input['licenses'].apply(
 	lambda licenses: json.dumps(
 		[
 			license_entry.get('publicationForm', {}).get('title', '')
@@ -88,7 +88,7 @@ df_out['categoryMedium_mv'] = df['licenses'].apply(
 		ensure_ascii=False,
 	)
 )
-df_out['filterMedium_mv'] = df['licenses'].apply(
+df['filterMedium_mv'] = df_input['licenses'].apply(
 	lambda licenses: json.dumps(
 		[
 			license_entry.get('publicationForm', {}).get('title', '')
@@ -98,7 +98,7 @@ df_out['filterMedium_mv'] = df['licenses'].apply(
 		ensure_ascii=False,
 	)
 )
-df_out['publisher_display_mv'] = df['licenses'].apply(
+df['publisher_display_mv'] = df_input['licenses'].apply(
 	lambda licenses: json.dumps(
 		[
 			license_entry.get('publisher', {}).get('title', '')
@@ -108,7 +108,7 @@ df_out['publisher_display_mv'] = df['licenses'].apply(
 		ensure_ascii=False,
 	)
 )
-df_out['publisher_id_mv'] = df['licenses'].apply(
+df['publisher_id_mv'] = df_input['licenses'].apply(
 	lambda licenses: json.dumps(
 		[
 			str(license_entry.get('publisher', {}).get('id', ''))
@@ -118,10 +118,10 @@ df_out['publisher_id_mv'] = df['licenses'].apply(
 		ensure_ascii=False,
 	)
 )
-df_out['country_mv'] = df['countries'].apply(
+df['country_mv'] = df_input['countries'].apply(
 	lambda countries: json.dumps([country.get('title', '') for country in countries], ensure_ascii=False)
 )
-df_out['url'] = df['licenses'].apply(
+df['url'] = df_input['licenses'].apply(
 	lambda licenses: next(
 		(
 			access.get('accessUrl', '')
@@ -132,7 +132,7 @@ df_out['url'] = df['licenses'].apply(
 		'',
 	)
 )
-df_out['website_url_mv'] = df['licenses'].apply(
+df['website_url_mv'] = df_input['licenses'].apply(
 	lambda licenses: json.dumps(
 		[
 			access.get('accessUrl', '')
@@ -143,7 +143,7 @@ df_out['website_url_mv'] = df['licenses'].apply(
 		ensure_ascii=False,
 	)
 )
-df_out['website_description_mv'] = df['licenses'].apply(
+df['website_description_mv'] = df_input['licenses'].apply(
 	lambda licenses: json.dumps(
 		[
 			access.get('labelLongest')
@@ -157,7 +157,7 @@ df_out['website_description_mv'] = df['licenses'].apply(
 		ensure_ascii=False,
 	)
 )
-df_out['digitalObject_display_mv'] = df['licenses'].apply(
+df['digitalObject_display_mv'] = df_input['licenses'].apply(
 	lambda licenses: json.dumps(
 		[
 			access.get('labelLongest')
@@ -170,7 +170,7 @@ df_out['digitalObject_display_mv'] = df['licenses'].apply(
 		ensure_ascii=False,
 	)
 )
-df_out['digitalObject_hyperlink_mv'] = df['licenses'].apply(
+df['digitalObject_hyperlink_mv'] = df_input['licenses'].apply(
 	lambda licenses: json.dumps(
 		[
 			access.get('accessUrl', '')
@@ -181,7 +181,7 @@ df_out['digitalObject_hyperlink_mv'] = df['licenses'].apply(
 		ensure_ascii=False,
 	)
 )
-df_out['digitalObject_fileExtension_mv'] = df['licenses'].apply(
+df['digitalObject_fileExtension_mv'] = df_input['licenses'].apply(
 	lambda licenses: json.dumps(
 		sorted(
 			{
@@ -194,7 +194,7 @@ df_out['digitalObject_fileExtension_mv'] = df['licenses'].apply(
 		ensure_ascii=False,
 	)
 )
-df_out['digitalObject_license_mv'] = df['licenses'].apply(
+df['digitalObject_license_mv'] = df_input['licenses'].apply(
 	lambda licenses: json.dumps(
 		[
 			license_entry.get('type', {}).get('title', '')
@@ -204,7 +204,7 @@ df_out['digitalObject_license_mv'] = df['licenses'].apply(
 		ensure_ascii=False,
 	)
 )
-df_out['digitalObject_licenseNote_mv'] = df['licenses'].apply(
+df['digitalObject_licenseNote_mv'] = df_input['licenses'].apply(
 	lambda licenses: json.dumps(
 		[
 			license_entry.get('externalNotes', '')
@@ -214,16 +214,16 @@ df_out['digitalObject_licenseNote_mv'] = df['licenses'].apply(
 		ensure_ascii=False,
 	)
 )
-df_out['digitalObject_accessLevel_mv'] = df['is_free'].map(
+df['digitalObject_accessLevel_mv'] = df_input['is_free'].map(
 	{True: 'public', False: 'restricted'}
 ).astype('string')
-df_out['titleOther_text_mv'] = df['alternative_titles'].apply(
+df['titleOther_text_mv'] = df_input['alternative_titles'].apply(
 	lambda alternative_titles: json.dumps(
 		[alternative_title.get('title', '') for alternative_title in alternative_titles],
 		ensure_ascii=False,
 	)
 )
-df_out['classification_display_mv'] = df['top_resource_entries'].apply(
+df['classification_display_mv'] = df_input['top_resource_entries'].apply(
 	lambda entries: json.dumps(
 		[
 			entry.get('subject', {}).get('title', {}).get('de', '')
@@ -233,7 +233,7 @@ df_out['classification_display_mv'] = df['top_resource_entries'].apply(
 		ensure_ascii=False,
 	)
 )
-df_out['classification_id_mv'] = df['top_resource_entries'].apply(
+df['classification_id_mv'] = df_input['top_resource_entries'].apply(
 	lambda entries: json.dumps(
 		[
 			str(entry.get('subject', {}).get('id', ''))
@@ -243,16 +243,16 @@ df_out['classification_id_mv'] = df['top_resource_entries'].apply(
 		ensure_ascii=False,
 	)
 )
-df_out['vendor_type_mv'] = df['external_ids'].apply(
+df['vendor_type_mv'] = df_input['external_ids'].apply(
 	lambda external_ids: json.dumps([external_id.get('namespace', '') for external_id in external_ids], ensure_ascii=False)
 )
-df_out['vendor_id_mv'] = df['external_ids'].apply(
+df['vendor_id_mv'] = df_input['external_ids'].apply(
 	lambda external_ids: json.dumps([external_id.get('id', '') for external_id in external_ids], ensure_ascii=False)
 )
-df_out['reference_type_mv'] = df['external_ids'].apply(
+df['reference_type_mv'] = df_input['external_ids'].apply(
 	lambda external_ids: json.dumps([external_id.get('id_name', '') for external_id in external_ids], ensure_ascii=False)
 )
-df_out['reference_text_mv'] = df['external_ids'].apply(
+df['reference_text_mv'] = df_input['external_ids'].apply(
 	lambda external_ids: json.dumps(
 		[
 			f"{external_id.get('namespace', '')}:{external_id.get('id', '')}".strip(':')
@@ -261,12 +261,12 @@ df_out['reference_text_mv'] = df['external_ids'].apply(
 		ensure_ascii=False,
 	)
 )
-df_out['statusEditing'] = df['traffic_light'].fillna('').astype('string')
+df['statusEditing'] = df_input['traffic_light'].fillna('').astype('string')
 
-df_out = df_out.fillna('')
-df_out[df_out.columns] = df_out[df_out.columns].astype('string').replace(
+df = df.fillna('')
+df[df.columns] = df[df.columns].astype('string').replace(
 	{r'[\r\n\t]+': ' '}, regex=True
 ).apply(lambda column: column.str.strip())
-df_out.to_csv(args.output, sep='\t', index=False)
 
-print(f'{len(df_out)} Datensaetze transformiert nach {args.output}')
+# Export
+df.to_csv(args.output, sep='\t', index=False)

@@ -22,15 +22,15 @@ tasks:
     preconditions:
       - command -v python3
 
-  download:
-    desc: Abruf der DBIS-Daten
+  transform:
+    desc: Transformation der DBIS-Daten
     cmds:
-      - python3 download.py
+      - python3 transform.py
     sources:
       - input/dbis-dla.jsonl
       - transform.py
       - Taskfile.yml
     generates:
-      - output/dbis-dla.tsv
+      - output/dbis.tsv
     preconditions:
       - command -v python3
