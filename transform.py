@@ -87,7 +87,7 @@ df['filterDigital'] = True
 df['filterMedium_mv'] = 'Datenbank'
 df['filterSource'] = 'Digitale Nachschlagewerke'
 df['filterType_mv'] = 'Daten'
-df['note'] = df_input.apply(
+df['noteRequirements_mv'] = df_input.apply(
 	lambda row: '␟'.join(
 		[
 			text
@@ -101,6 +101,10 @@ df['note'] = df_input.apply(
 	axis=1,
 )
 df['noteContent_mv'] = df_input['description']
+df['publicationHistory'] = df_input.apply(
+	lambda row: format_year_range(row.get('report_time_start'), row.get('report_time_end')),
+	axis=1,
+)
 df['publisherOriginalText_mv'] = df_input.apply(
 	lambda row: '␟'.join(
 		dict.fromkeys(
