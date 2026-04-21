@@ -78,7 +78,7 @@ df['displayAddition2'] = df_input.apply(
 	axis=1,
 )
 df['displayName'] = df_input.apply(
-	lambda row: '␟'.join(
+	lambda row: ', '.join(
 		dict.fromkeys(
 			[
 				author.get('title', '').strip()
@@ -101,7 +101,7 @@ df['filterMedium_mv'] = 'Datenbank'
 df['filterSource'] = 'Digitale Nachschlagewerke'
 df['filterType_mv'] = 'Daten'
 df['note'] = df_input.apply(
-	lambda row: ' | '.join(
+	lambda row: '. '.join(
 		[
 			text
 			for text in [
