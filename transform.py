@@ -34,7 +34,7 @@ df['country_mv'] = df_input['countries'].apply(
 )
 df['dateCataloged'] = pd.to_datetime(df_input['created_at'], errors='coerce').dt.date.astype('string')
 df['dateModified'] = pd.to_datetime(df_input['modified_at'], errors='coerce').dt.date.astype('string')
-df['dateOrigin'] = pd.to_datetime(df_input['publication_time_start'], errors='coerce').dt.year.fillna('').astype('string')
+df['dateOrigin'] = pd.to_datetime(df_input['publication_time_start'], errors='coerce').dt.year.astype('Int64').astype('string').fillna('')
 df['dateOriginComment_mv'] = df_input.apply(
 	lambda row: (
 		f"{str(row.get('publication_time_start')).strip()} - {str(row.get('publication_time_end')).strip()}"
