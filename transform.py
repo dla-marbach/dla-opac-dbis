@@ -172,6 +172,15 @@ df['titleOther_text_mv'] = df_input['alternative_titles'].apply(
 		]
 	)
 )
+df['titleOther_type_mv'] = df_input['alternative_titles'].apply(
+	lambda alternative_titles: '␟'.join(
+		[
+			'370n'
+			for alternative_title in (alternative_titles if isinstance(alternative_titles, list) else [])
+			if isinstance(alternative_title, dict) and alternative_title.get('title', '').strip()
+		]
+	)
+)
 df['url'] = 'https://www.dla-marbach.de/find/opac/id/' + 'DBIS' + df_input['id'].astype('string')
 df['website_url_mv'] = df_input['licenses'].apply(
 	lambda licenses: '␟'.join(
