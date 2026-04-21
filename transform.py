@@ -3,7 +3,6 @@
 """Transform DBIS-Daten des DLA"""
 
 import argparse
-import json
 import pandas as pd
 
 __author__ = 'Felix Lohmeier'
@@ -17,256 +16,196 @@ df_input = pd.read_json(args.input, lines=True)
 
 df = pd.DataFrame(index=df_input.index)
 
-df['source'] = 'AK'
-df['filterSource'] = 'Digitale Nachschlagewerke'
-df['category'] = 'Bibliotheksdokumente'
-df['categorySub'] = 'Datenbankressource'
-df['id'] = df_input['id'].astype('string')
-df['display'] = df_input['title'].fillna('')
-df['title'] = df_input['title'].fillna('')
-df['titleMain_text'] = df_input['title'].fillna('')
-df['displayAddition1'] = df_input['description_short'].fillna('')
-df['displayAddition2'] = df_input['types'].apply(
-	lambda types: ', '.join([type_entry.get('title', '') for type_entry in types if type_entry.get('title')])
+df['id'] = 'DBIS' + df_input['id'].astype('string')
+
+df['category'] = 'Digitale Nachschlagewerke'
+df['categoryMedium_mv'] = 'Online-Ressource'
+df['categoryPublication_mv'] = df_input['types'].apply(
+	lambda types: ', '.join([type_entry.get('title', '') for type_entry in types if type_entry.get('title')]) or 'Datenbank'
 )
-df['description_text_mv'] = df_input['description'].fillna('')
-df['note'] = df_input['note'].fillna('')
-df['usageRestrictionNote'] = df_input['instructions'].fillna('')
-df['confidential'] = False
-df['filterDigital'] = df_input['licenses'].apply(
-	lambda licenses: bool(licenses) and any(
-		bool(access.get('accessUrl'))
-		for license_entry in licenses
-		for access in license_entry.get('accesses', [])
+df['country_mv'] = df_input['countries'].apply(
+	lambda countries: '␟'.join(
+		[
+			country.get('title', '').strip()
+			for country in (countries if isinstance(countries, list) else [])
+			if isinstance(country, dict) and country.get('title', '').strip()
+		]
 	)
 )
 df['dateCataloged'] = pd.to_datetime(df_input['created_at'], errors='coerce').dt.date.astype('string')
 df['dateModified'] = pd.to_datetime(df_input['modified_at'], errors='coerce').dt.date.astype('string')
-df['dateOrigin'] = pd.to_datetime(df_input['publication_time_start'], errors='coerce').dt.year.astype('Int64').astype('string')
-df['isbn_mv'] = df_input['isbn_issn'].fillna('').astype('string').str.strip()
-df['creator_display_mv'] = df_input['authors'].apply(
-	lambda authors: json.dumps([author.get('title', '') for author in authors], ensure_ascii=False)
+df['dateOrigin'] = pd.to_datetime(df_input['publication_time_start'], errors='coerce').dt.year.fillna('').astype('string')
+df['dateOriginComment_mv'] = df_input.apply(
+	lambda row: (
+		f"{str(row.get('publication_time_start')).strip()} - {str(row.get('publication_time_end')).strip()}"
+		if pd.notna(row.get('publication_time_start'))
+		and str(row.get('publication_time_start')).strip()
+		and pd.notna(row.get('publication_time_end'))
+		and str(row.get('publication_time_end')).strip()
+		else (
+			str(row.get('publication_time_start')).strip()
+			if pd.notna(row.get('publication_time_start')) and str(row.get('publication_time_start')).strip()
+			else (
+				str(row.get('publication_time_end')).strip()
+				if pd.notna(row.get('publication_time_end')) and str(row.get('publication_time_end')).strip()
+				else ''
+			)
+		)
+	),
+	axis=1,
 )
-df['creator_id_mv'] = df_input['authors'].apply(
-	lambda authors: json.dumps([str(author.get('id', '')) for author in authors], ensure_ascii=False)
+df['display'] = df_input['title'].fillna('ohne Titel')
+df['displayAddition1'] = df_input['types'].apply(
+	lambda types: ', '.join([type_entry.get('title', '') for type_entry in types if type_entry.get('title')]) or 'Datenbank'
 )
-df['subject_display_mv'] = df_input['subjects'].apply(
-	lambda subjects: json.dumps([subject.get('title', '') for subject in subjects], ensure_ascii=False)
+df['displayAddition2'] = df_input.apply(
+	lambda row: (
+		f"{str(row.get('report_time_start')).strip()} - {str(row.get('report_time_end')).strip()}"
+		if pd.notna(row.get('report_time_start'))
+		and str(row.get('report_time_start')).strip()
+		and pd.notna(row.get('report_time_end'))
+		and str(row.get('report_time_end')).strip()
+		else (
+			str(row.get('report_time_start')).strip()
+			if pd.notna(row.get('report_time_start')) and str(row.get('report_time_start')).strip()
+			else (
+				str(row.get('report_time_end')).strip()
+				if pd.notna(row.get('report_time_end')) and str(row.get('report_time_end')).strip()
+				else ''
+			)
+		)
+	),
+	axis=1,
 )
-df['subject_id_mv'] = df_input['subjects'].apply(
-	lambda subjects: json.dumps([str(subject.get('id', '')) for subject in subjects], ensure_ascii=False)
+df['displayName'] = df_input.apply(
+	lambda row: '␟'.join(
+		dict.fromkeys(
+			[
+				author.get('title', '').strip()
+				for author in (row.get('authors') if isinstance(row.get('authors'), list) else [])
+				if isinstance(author, dict) and author.get('title', '').strip()
+			]
+			+ [
+				license_entry.get('publisher', {}).get('title', '').strip()
+				for license_entry in (row.get('licenses') if isinstance(row.get('licenses'), list) else [])
+				if isinstance(license_entry, dict)
+				and isinstance(license_entry.get('publisher'), dict)
+				and license_entry.get('publisher', {}).get('title', '').strip()
+			]
+		)
+	),
+	axis=1,
 )
-df['filterSubject_mv'] = df_input['subjects'].apply(
-	lambda subjects: json.dumps([subject.get('title', '') for subject in subjects], ensure_ascii=False)
+df['filterDigital'] = True
+df['filterMedium_mv'] = 'Datenbank'
+df['filterSource'] = 'Digitale Nachschlagewerke'
+df['filterType_mv'] = 'Daten'
+df['note'] = df_input.apply(
+	lambda row: ' | '.join(
+		[
+			text
+			for text in [
+				str(row.get('instructions')).strip() if pd.notna(row.get('instructions')) else '',
+				str(row.get('note')).strip() if pd.notna(row.get('note')) else '',
+			]
+			if text
+		]
+	),
+	axis=1,
 )
+df['noteContent_mv'] = df_input['description']
+df['publisherOriginalText_mv'] = df_input.apply(
+	lambda row: '␟'.join(
+		dict.fromkeys(
+			[
+				author.get('title', '').strip()
+				for author in (row.get('authors') if isinstance(row.get('authors'), list) else [])
+				if isinstance(author, dict) and author.get('title', '').strip()
+			]
+			+ [
+				license_entry.get('publisher', {}).get('title', '').strip()
+				for license_entry in (row.get('licenses') if isinstance(row.get('licenses'), list) else [])
+				if isinstance(license_entry, dict)
+				and isinstance(license_entry.get('publisher'), dict)
+				and license_entry.get('publisher', {}).get('title', '').strip()
+			]
+		)
+	),
+	axis=1,
+)
+df['source'] = 'AK'
 df['subjectOther_mv'] = df_input['keywords'].apply(
-	lambda keywords: json.dumps([keyword.get('title', '') for keyword in keywords], ensure_ascii=False)
-)
-df['filterType_mv'] = df_input['types'].apply(
-	lambda types: json.dumps([type_entry.get('title', '') for type_entry in types], ensure_ascii=False)
-)
-df['categoryContent_mv'] = df_input['types'].apply(
-	lambda types: json.dumps([type_entry.get('title', '') for type_entry in types], ensure_ascii=False)
-)
-df['categoryMedia_mv'] = df_input['licenses'].apply(
-	lambda licenses: json.dumps(
+	lambda keywords: '␟'.join(
 		[
-			license_entry.get('publicationForm', {}).get('title', '')
-			for license_entry in licenses
-			if license_entry.get('publicationForm')
-		],
-		ensure_ascii=False,
+			keyword.get('title', '').strip()
+			for keyword in (keywords if isinstance(keywords, list) else [])
+			if isinstance(keyword, dict) and keyword.get('title', '').strip()
+		]
 	)
 )
-df['categoryMedium_mv'] = df_input['licenses'].apply(
-	lambda licenses: json.dumps(
+df['textualHolding_mv'] = df_input.apply(
+	lambda row: (
+		f"{str(row.get('report_time_start')).strip()} - {str(row.get('report_time_end')).strip()}"
+		if pd.notna(row.get('report_time_start'))
+		and str(row.get('report_time_start')).strip()
+		and pd.notna(row.get('report_time_end'))
+		and str(row.get('report_time_end')).strip()
+		else (
+			str(row.get('report_time_start')).strip()
+			if pd.notna(row.get('report_time_start')) and str(row.get('report_time_start')).strip()
+			else (
+				str(row.get('report_time_end')).strip()
+				if pd.notna(row.get('report_time_end')) and str(row.get('report_time_end')).strip()
+				else ''
+			)
+		)
+	),
+	axis=1,
+)
+df['title'] = df_input['title'].fillna('ohne Titel')
+df['titleOther_text_mv'] = df_input['alternative_titles'].apply(
+	lambda alternative_titles: '␟'.join(
 		[
-			license_entry.get('publicationForm', {}).get('title', '')
-			for license_entry in licenses
-			if license_entry.get('publicationForm')
-		],
-		ensure_ascii=False,
+			alternative_title.get('title', '').strip()
+			for alternative_title in (alternative_titles if isinstance(alternative_titles, list) else [])
+			if isinstance(alternative_title, dict) and alternative_title.get('title', '').strip()
+		]
 	)
 )
-df['filterMedium_mv'] = df_input['licenses'].apply(
-	lambda licenses: json.dumps(
-		[
-			license_entry.get('publicationForm', {}).get('title', '')
-			for license_entry in licenses
-			if license_entry.get('publicationForm')
-		],
-		ensure_ascii=False,
-	)
-)
-df['publisher_display_mv'] = df_input['licenses'].apply(
-	lambda licenses: json.dumps(
-		[
-			license_entry.get('publisher', {}).get('title', '')
-			for license_entry in licenses
-			if license_entry.get('publisher')
-		],
-		ensure_ascii=False,
-	)
-)
-df['publisher_id_mv'] = df_input['licenses'].apply(
-	lambda licenses: json.dumps(
-		[
-			str(license_entry.get('publisher', {}).get('id', ''))
-			for license_entry in licenses
-			if license_entry.get('publisher')
-		],
-		ensure_ascii=False,
-	)
-)
-df['country_mv'] = df_input['countries'].apply(
-	lambda countries: json.dumps([country.get('title', '') for country in countries], ensure_ascii=False)
-)
-df['url'] = df_input['licenses'].apply(
-	lambda licenses: next(
-		(
-			access.get('accessUrl', '')
-			for license_entry in licenses
-			for access in license_entry.get('accesses', [])
-			if access.get('accessUrl')
-		),
-		'',
-	)
-)
+df['url'] = 'https://www.dla-marbach.de/find/opac/id/' + 'DBIS' + df_input['id'].astype('string')
 df['website_url_mv'] = df_input['licenses'].apply(
-	lambda licenses: json.dumps(
+	lambda licenses: '␟'.join(
 		[
-			access.get('accessUrl', '')
-			for license_entry in licenses
+			access.get('accessUrl', '').strip()
+			for license_entry in (licenses if isinstance(licenses, list) else [])
+			if isinstance(license_entry, dict)
 			for access in license_entry.get('accesses', [])
-			if access.get('accessUrl')
-		],
-		ensure_ascii=False,
+			if isinstance(access, dict) and access.get('accessUrl', '').strip()
+		]
 	)
 )
 df['website_description_mv'] = df_input['licenses'].apply(
-	lambda licenses: json.dumps(
+	lambda licenses: '␟'.join(
 		[
-			access.get('labelLongest')
-			or access.get('labelLong')
-			or access.get('label')
-			or access.get('description')
-			or ''
-			for license_entry in licenses
+			(
+				(
+					access.get('type', {}).get('title', '').strip()
+					if isinstance(access.get('type'), dict) and access.get('type', {}).get('title', '').strip()
+					else 'Zugang'
+				)
+				+ (
+					f" ({access.get('labelLong').strip()})"
+					if isinstance(access.get('labelLong'), str) and access.get('labelLong').strip()
+					else ''
+				)
+			)
+			for license_entry in (licenses if isinstance(licenses, list) else [])
+			if isinstance(license_entry, dict)
 			for access in license_entry.get('accesses', [])
-		],
-		ensure_ascii=False,
+			if isinstance(access, dict) and access.get('accessUrl', '').strip()
+		]
 	)
 )
-df['digitalObject_display_mv'] = df_input['licenses'].apply(
-	lambda licenses: json.dumps(
-		[
-			access.get('labelLongest')
-			or access.get('labelLong')
-			or access.get('label')
-			or ''
-			for license_entry in licenses
-			for access in license_entry.get('accesses', [])
-		],
-		ensure_ascii=False,
-	)
-)
-df['digitalObject_hyperlink_mv'] = df_input['licenses'].apply(
-	lambda licenses: json.dumps(
-		[
-			access.get('accessUrl', '')
-			for license_entry in licenses
-			for access in license_entry.get('accesses', [])
-			if access.get('accessUrl')
-		],
-		ensure_ascii=False,
-	)
-)
-df['digitalObject_fileExtension_mv'] = df_input['licenses'].apply(
-	lambda licenses: json.dumps(
-		sorted(
-			{
-				access.get('accessUrl', '').split('?', 1)[0].rsplit('.', 1)[-1].lower()
-				for license_entry in licenses
-				for access in license_entry.get('accesses', [])
-				if access.get('accessUrl') and '.' in access.get('accessUrl', '').split('?', 1)[0].rsplit('/', 1)[-1]
-			}
-		),
-		ensure_ascii=False,
-	)
-)
-df['digitalObject_license_mv'] = df_input['licenses'].apply(
-	lambda licenses: json.dumps(
-		[
-			license_entry.get('type', {}).get('title', '')
-			for license_entry in licenses
-			if license_entry.get('type')
-		],
-		ensure_ascii=False,
-	)
-)
-df['digitalObject_licenseNote_mv'] = df_input['licenses'].apply(
-	lambda licenses: json.dumps(
-		[
-			license_entry.get('externalNotes', '')
-			for license_entry in licenses
-			if license_entry.get('externalNotes')
-		],
-		ensure_ascii=False,
-	)
-)
-df['digitalObject_accessLevel_mv'] = df_input['is_free'].map(
-	{True: 'public', False: 'restricted'}
-).astype('string')
-df['titleOther_text_mv'] = df_input['alternative_titles'].apply(
-	lambda alternative_titles: json.dumps(
-		[alternative_title.get('title', '') for alternative_title in alternative_titles],
-		ensure_ascii=False,
-	)
-)
-df['classification_display_mv'] = df_input['top_resource_entries'].apply(
-	lambda entries: json.dumps(
-		[
-			entry.get('subject', {}).get('title', {}).get('de', '')
-			for entry in entries
-			if entry.get('subject')
-		],
-		ensure_ascii=False,
-	)
-)
-df['classification_id_mv'] = df_input['top_resource_entries'].apply(
-	lambda entries: json.dumps(
-		[
-			str(entry.get('subject', {}).get('id', ''))
-			for entry in entries
-			if entry.get('subject')
-		],
-		ensure_ascii=False,
-	)
-)
-df['vendor_type_mv'] = df_input['external_ids'].apply(
-	lambda external_ids: json.dumps([external_id.get('namespace', '') for external_id in external_ids], ensure_ascii=False)
-)
-df['vendor_id_mv'] = df_input['external_ids'].apply(
-	lambda external_ids: json.dumps([external_id.get('id', '') for external_id in external_ids], ensure_ascii=False)
-)
-df['reference_type_mv'] = df_input['external_ids'].apply(
-	lambda external_ids: json.dumps([external_id.get('id_name', '') for external_id in external_ids], ensure_ascii=False)
-)
-df['reference_text_mv'] = df_input['external_ids'].apply(
-	lambda external_ids: json.dumps(
-		[
-			f"{external_id.get('namespace', '')}:{external_id.get('id', '')}".strip(':')
-			for external_id in external_ids
-		],
-		ensure_ascii=False,
-	)
-)
-df['statusEditing'] = df_input['traffic_light'].fillna('').astype('string')
-
-df = df.fillna('')
-df[df.columns] = df[df.columns].astype('string').replace(
-	{r'[\r\n\t]+': ' '}, regex=True
-).apply(lambda column: column.str.strip())
 
 # Export
 df.to_csv(args.output, sep='\t', index=False)
